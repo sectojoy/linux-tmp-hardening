@@ -1,20 +1,29 @@
-# Linux /tmp Hardening Script (Ubuntu Security Hardening)
+# Linux /tmp Hardening Script (Debian/Ubuntu)
 
-A robust Bash script to automate the hardening of `/tmp` and `/var/tmp` directories on Linux (Ubuntu/Debian).
+A robust Bash script to automate the hardening of `/tmp` and `/var/tmp` directories on Debian-based systems.
 
 By mounting temporary directories with the `noexec` option, this tool **effectively blocks the download and execution of crypto-miners, WebShells, and other malicious scripts**, serving as a critical first line of defense for your servers.
 
 ## 🛡️ Key Features
 
-* **Automated Mount Hardening**: Mounts `/tmp` as a `tmpfs` (RAM disk) with `noexec,nosuid,nodev` permissions.
+* **Automated Hardening**: Mounts `/tmp` as a `tmpfs` (RAM disk) with `noexec,nosuid,nodev` permissions.
 * **Dual Protection**: Binds `/var/tmp` to `/tmp`, ensuring it inherits the same security policies.
-* **APT Compatibility**: Includes an automated APT Hook to temporarily allow execution during updates (`apt update` / `apt upgrade`), preventing permission errors.
-* **Idempotent Design**: Safe to run multiple times. It detects existing configurations and applies fixes without duplicating entries.
-* **Auto-Backup**: Automatically creates a backup of `/etc/fstab` on the first run, allowing for easy restoration.
+* **Universal Compatibility**: Works seamlessly on **Ubuntu** and **Debian**.
+* **APT Smart Hook**: Includes an automated APT Hook to temporarily allow execution only during updates (`apt update`), preventing permission errors.
+* **Idempotent & Safe**: Checks OS type before running. Detects existing configurations to prevent duplication.
+* **Auto-Backup**: Automatically backs up `/etc/fstab` before making changes.
 
-## 🚀 Quick Start (One-Click Installation)
+## 💻 Supported OS
 
-No need to manually download files. Run the following command directly in your server terminal to apply the hardening:
+| OS | Versions |
+| --- | --- |
+| **Ubuntu** | 18.04 LTS, 20.04 LTS, 22.04 LTS, 24.04 LTS |
+| **Debian** | 10 (Buster), 11 (Bullseye), 12 (Bookworm) |
+| **Others** | Kali Linux, Linux Mint, Pop!_OS (Debian-based) |
+
+## 🚀 Quick Start
+
+Run the following command directly in your server terminal:
 
 **Using wget:**
 
@@ -36,21 +45,21 @@ curl -sL https://raw.githubusercontent.com/sectojoy/linux-tmp-hardening/main/tmp
 
 ## ✅ Verification
 
-After the script completes, verify that the hardening is active:
+After the script completes, verify the hardening status:
 
 ### 1. Check Mount Permissions
 
-Run the following command. The output must include `noexec`:
+Output must include `noexec`:
 
 ```bash
 mount | grep -E '\s/tmp\s'
-# Expected output example: tmpfs on /tmp type tmpfs (rw,nosuid,nodev,noexec,relatime,size=2G)
+# Expected: tmpfs on /tmp type tmpfs (rw,nosuid,nodev,noexec,relatime,size=2G)
 
 ```
 
 ### 2. Test Execution Block
 
-Try to create and run a script in `/tmp`. You should see a **Permission denied** error:
+Creating and running a script in `/tmp` should fail:
 
 ```bash
 echo "echo 'Hacked'" > /tmp/test_exec.sh
@@ -62,7 +71,7 @@ chmod +x /tmp/test_exec.sh
 
 ### 3. Test System Updates
 
-Ensure that system updates still work correctly:
+Ensure APT still works correctly:
 
 ```bash
 sudo apt update
@@ -72,48 +81,27 @@ sudo apt update
 
 ---
 
-## 🚑 Rollback (Uninstall)
+## 🚑 Rollback
 
-If you encounter compatibility issues (e.g., with specific compilation tasks requiring execution in `/tmp`), you can revert to the original state:
+If you need to revert the changes, execute the following:
 
 ```bash
-# 1. Restore the original fstab backup
+# 1. Restore original fstab
 sudo cp /etc/fstab.bak /etc/fstab
 
-# 2. Remove the APT compatibility hook
+# 2. Remove APT hook
 sudo rm -f /etc/apt/apt.conf.d/99tmp-exec-fix
 
-# 3. Reload systemd configuration
-sudo systemctl daemon-reload
-
-# 4. Remount and restore execution permissions
+# 3. Reload configuration
+if command -v systemctl &> /dev/null; then sudo systemctl daemon-reload; fi
 sudo mount -a
+
+# 4. Restore exec permission
 sudo mount -o remount,exec /tmp
 
-echo "✅ System restored to pre-hardened state."
+echo "✅ Rollback complete."
 
 ```
-
----
-
-## ⚙️ Technical Details
-
-The script modifies the following system files:
-
-1. **/etc/fstab**:
-* Adds or updates the `/tmp` entry to mount as `tmpfs` with: `rw,nosuid,nodev,noexec,relatime,size=2G`.
-* Adds a Bind Mount for `/var/tmp` pointing to `/tmp`.
-
-
-2. **/etc/apt/apt.conf.d/99tmp-exec-fix**:
-* Injects `DPkg::Pre-Invoke` and `DPkg::Post-Invoke` hooks to remount `/tmp` as `exec` during installation and restore `noexec` immediately after.
-
-
-
-## ⚠️ Compatibility Notes
-
-* **Snap Applications**: A small number of Snap apps may attempt to execute binaries from hardcoded paths in `/tmp`, potentially causing crashes. Please test carefully if you rely heavily on Snap in a desktop environment.
-* **Custom Compilation**: If you manually compile source code (`make` / `gcc`), the process might require execution rights in the temp directory. It is recommended to specify a different build directory: `mkdir ~/build_tmp && export TMPDIR=~/build_tmp`.
 
 ---
 
