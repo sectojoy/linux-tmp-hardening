@@ -62,10 +62,12 @@ mount | grep -E '\s/tmp\s'
 Creating and running a script in `/tmp` should fail:
 
 ```bash
-echo "echo 'Hacked'" > /tmp/test_exec.sh
-chmod +x /tmp/test_exec.sh
-/tmp/test_exec.sh
-# Expected output: bash: /tmp/test_exec.sh: Permission denied
+echo -e '#!/bin/bash\necho "Hack"' > /tmp/test.sh
+chmod +x /tmp/test.sh
+/tmp/test.sh
+
+# Expected output: 
+# -bash: /tmp/test.sh: Permission denied
 
 ```
 
